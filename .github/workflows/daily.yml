@@ -1,0 +1,39 @@
+name: Daily podcast pipeline
+
+on:
+  schedule:
+    - cron: "0 14 * * *"  # ~7am Pacific — GitHub Actions cron is UTC-fixed,
+                           # so this drifts an hour across DST (known limitation)
+  workflow_dispatch:       # lets us trigger it manually to test
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -m pipeline.main
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/ state/
+          git diff --staged --quiet || git commit -m "Daily update: $(date -u +'%Y-%m-%d')"
+          git push
