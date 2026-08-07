@@ -2,6 +2,5 @@ __pycache__/
 *.pyc
 .venv/
 .env
-sample_*.mp3
 .claude/
 
